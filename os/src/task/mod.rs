@@ -54,6 +54,7 @@ lazy_static! {
         let mut tasks = [TaskControlBlock {
             task_cx: TaskContext::zero_init(),
             task_status: TaskStatus::UnInit,
+            system_call_times: [0; 500],
         }; MAX_APP_NUM];
         for (i, task) in tasks.iter_mut().enumerate() {
             task.task_cx = TaskContext::goto_restore(init_app_cx(i));
@@ -76,6 +77,18 @@ impl TaskManager {
     ///
     /// Generally, the first task in task list is an idle task (we call it zero process later).
     /// But in ch3, we load apps statically, so the first task is a real app.
+    ///封装系统调更新次数
+    pub fn systimes_updata(& self,id:usize){
+        let inner=& mut self.inner.exclusive_access();
+        let current =inner.current_task;
+        inner.tasks[current].syscall_times_updata(id);
+    }
+///读取当前调用次数
+    pub fn read_systimes(& self,id:usize)->isize{
+        let inner=& mut self.inner.exclusive_access();
+        let current =inner.current_task;
+        inner.tasks[current].read_syscall_times(id)
+    }
     fn run_first_task(&self) -> ! {
         let mut inner = self.inner.exclusive_access();
         let task0 = &mut inner.tasks[0];
