@@ -40,6 +40,19 @@ pub struct MemorySet {
 }
 
 impl MemorySet {
+
+    ///释放页表映射
+    pub fn page_table_umap(& mut self,vpn:VirtPageNum){
+       
+        self.page_table.unmap(vpn);
+    }
+    ///释放逻辑段记录
+    pub fn maparea_umap(& mut self,start :VirtPageNum){
+        
+        if let Some(index)=self.areas.iter().position(|x| x.vpn_range.get_start()==start){
+            self.areas.remove(index);
+        }
+    }
     /// Create a new empty `MemorySet`.
     pub fn new_bare() -> Self {
         Self {
@@ -63,6 +76,7 @@ impl MemorySet {
             None,
         );
     }
+    ///
     fn push(&mut self, mut map_area: MapArea, data: Option<&[u8]>) {
         map_area.map(&mut self.page_table);
         if let Some(data) = data {
@@ -287,6 +301,7 @@ impl MapArea {
             map_perm,
         }
     }
+    
     pub fn map_one(&mut self, page_table: &mut PageTable, vpn: VirtPageNum) {
         let ppn: PhysPageNum;
         match self.map_type {
@@ -296,7 +311,10 @@ impl MapArea {
             MapType::Framed => {
                 let frame = frame_alloc().unwrap();
                 ppn = frame.ppn;
-                self.data_frames.insert(vpn, frame);
+                match  self.data_frames.insert(vpn, frame) {
+                    None=>(),
+                    _=>(),
+                }
             }
         }
         let pte_flags = PTEFlags::from_bits(self.map_perm.bits).unwrap();
@@ -322,6 +340,8 @@ impl MapArea {
     }
     #[allow(unused)]
     pub fn shrink_to(&mut self, page_table: &mut PageTable, new_end: VirtPageNum) {
+        //println!("shrink the vpn is {:?}",new_end);
+        //println!("shrink the vpn_end is {:?}",self.vpn_range.get_end());
         for vpn in VPNRange::new(new_end, self.vpn_range.get_end()) {
             self.unmap_one(page_table, vpn)
         }

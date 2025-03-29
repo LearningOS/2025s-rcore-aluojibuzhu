@@ -4,8 +4,8 @@ use super::{frame_alloc, FrameTracker, PhysPageNum, StepByOne, VirtAddr, VirtPag
 use alloc::vec;
 use alloc::vec::Vec;
 use bitflags::*;
-
-bitflags! {
+use crate::syscall::TimeVal;
+bitflags! { 
     /// page table entry flags
     pub struct PTEFlags: u8 {
         /// Valid
@@ -30,6 +30,7 @@ bitflags! {
 #[derive(Copy, Clone)]
 #[repr(C)]
 /// page table entry structure
+#[derive(Debug)]
 pub struct PageTableEntry {
     /// bits of page table entry
     pub bits: usize,
@@ -178,4 +179,45 @@ pub fn translated_byte_buffer(token: usize, ptr: *const u8, len: usize) -> Vec<&
         start = end_va.into();
     }
     v
+}
+///时间记录结构体查表
+pub fn translate_timeval(token: usize,_ts:*mut TimeVal)->&'static mut TimeVal{
+    let pagetable=PageTable::from_token(token);
+    let time_add=VirtAddr(_ts as usize);
+    let time_vpn=time_add.floor();
+    let time_ppn=pagetable.translate(time_vpn).unwrap().ppn();
+    time_ppn.get_offset_mut_time(time_add.page_offset())
+
+}
+///usize查表
+pub fn translate_usize(token:usize,data:usize)->Option<&'static mut usize>{
+    let data_vaddr=VirtAddr(data as *mut usize as usize);
+    let pagetable=PageTable::from_token(token);
+    let data_vpn=data_vaddr.floor();
+    match  pagetable.translate(data_vpn){
+        None=>{//println!("th data_vpn {}",data_vpn.0);
+        return None;},
+        Some(pte)=>if pte.is_valid(){
+           return  Some(pte.ppn().get_offset_mut_usize(data_vaddr.page_offset()))
+        }else{
+            return None;
+        },
+    }
+}
+
+///查表地址是否可读
+pub fn translate_flag(token:usize,addr:usize)->Option<PTEFlags>{
+    let data_vaddr=VirtAddr(addr as *mut usize as usize);
+    let pagetable=PageTable::from_token(token);
+    let data_vpn=data_vaddr.floor();
+
+    let high_bits = addr >> 39;
+    // 高25位必须全0（用户态）或全1（内核态）
+    if high_bits != 0 || high_bits == 0x1FFFF{
+        return None;
+    }
+    match  pagetable.translate(data_vpn){
+        None=>return None,
+        Some(pte)=>return Some(pte.flags()),
+    }
 }

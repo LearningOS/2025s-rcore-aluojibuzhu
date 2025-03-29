@@ -13,12 +13,17 @@ mod context;
 mod switch;
 #[allow(clippy::module_inception)]
 mod task;
-
+use crate::mm::{PageTableEntry, SimpleRange};
 use crate::loader::{get_app_data, get_num_app};
+use crate::mm::{VirtPageNum,VirtAddr,MapPermission};
+//use crate::mm::{MapPermission, VirtPageNum};
 use crate::sync::UPSafeCell;
 use crate::trap::TrapContext;
+//use alloc::collections::btree_map::Cursor;
 use alloc::vec::Vec;
 use lazy_static::*;
+//use riscv::addr::VirtAddr;
+//use crate::mm::VirtAddr;
 use switch::__switch;
 pub use task::{TaskControlBlock, TaskStatus};
 
@@ -71,6 +76,68 @@ lazy_static! {
 }
 
 impl TaskManager {
+    ///解引用
+    pub fn umap_memoryset(&self,start:VirtAddr,end:VirtAddr )->i32{
+        let start_vpn=start.floor();
+        let end_vpn=end.ceil();
+        let inner =& mut self.inner.exclusive_access();
+        let current=inner.current_task;
+        
+        for vpn in SimpleRange::new(start_vpn, end_vpn){
+            //println!("umap start_vpn is {:?}",vpn);
+            if let Some(pte)=inner.tasks[current].memory_set.translate(vpn){
+                //println!("pte is  {:?} start_vpn is {:?}",pte,start_vpn);
+                if !pte.is_valid(){
+                    return -1;
+                }
+                
+            }else {
+               return -1;
+            }
+            inner.tasks[current].memory_set.page_table_umap(vpn);
+            if let Some(pte)=inner.tasks[current].memory_set.translate(vpn){
+                if pte.is_valid(){
+                //println!("umap is err {:?} start_vpn is {:?}",pte,start_vpn);
+                }
+            }
+        }
+        0
+    }    
+    ///创造新map区域
+    pub fn creat_new_map_area(& self,start_va: VirtAddr, end_va: VirtAddr, perm: MapPermission){
+        let inner=& mut self.inner.exclusive_access();
+        let current=inner.current_task;
+        inner.tasks[current].memory_set.insert_framed_area(start_va, end_va, perm);
+    }
+    ///检查页帧是否已分配
+    pub fn curret_fram_is_empty(&self,vpn:VirtPageNum)->Option<PageTableEntry>{
+        let inner=& mut self.inner.exclusive_access();
+        let current=inner.current_task;
+        inner.tasks[current].memory_set.translate(vpn)
+    }
+    ///测试函数
+    pub fn read(&self)->usize{
+        let inner=& mut self.inner.exclusive_access();
+        let current=inner.current_task;
+        current
+    }
+
+    ///调用次数读取
+    pub fn read_syycall(&self,_id:usize)->usize{
+        
+        let inner =self.inner.exclusive_access();
+        let current=inner.current_task;
+        inner.tasks[current].syscall_times[_id]
+    }
+    ///trace跟踪系统调
+    pub fn syscall_updata(& self ,_id:usize){
+        let inner=&mut self.inner.exclusive_access();
+        let current=inner.current_task;
+        //if current!=0{
+        //println!("the current is {} id{}",current,_id);
+        //}
+        inner.tasks[current].syscal_record(_id);
+    }
     /// Run the first task in task list.
     ///
     /// Generally, the first task in task list is an idle task (we call it zero process later).
