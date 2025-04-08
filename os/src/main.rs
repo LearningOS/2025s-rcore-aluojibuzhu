@@ -100,16 +100,16 @@ fn kernel_log_info() {
 #[no_mangle]
 /// the rust entry-point of os
 pub fn rust_main() -> ! {
-    clear_bss();
-    kernel_log_info();
-    mm::init();
-    mm::remap_test();
-    task::add_initproc();
+    clear_bss();//清除.bss段
+    kernel_log_info();//输出内核存储信息
+    mm::init();//堆页帧分配管理器初始化，内和空间初始化
+    mm::remap_test();//检测内核空间是否映射正确
+    task::add_initproc();//在任务管理器中加入第一个待运行的程序
     println!("after initproc!");
     trap::init();
     trap::enable_timer_interrupt();
     timer::set_next_trigger();
-    loader::list_apps();
-    task::run_tasks();
+    loader::list_apps();//将app加载进如内核
+    task::run_tasks();//开始运行任务
     panic!("Unreachable in rust_main!");
 }

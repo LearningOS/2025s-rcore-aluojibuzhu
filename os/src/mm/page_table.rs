@@ -4,7 +4,7 @@ use alloc::string::String;
 use alloc::vec;
 use alloc::vec::Vec;
 use bitflags::*;
-
+use crate::syscall::TimeVal;
 bitflags! {
     /// page table entry flags
     pub struct PTEFlags: u8 {
@@ -143,6 +143,8 @@ impl PageTable {
     pub fn translate(&self, vpn: VirtPageNum) -> Option<PageTableEntry> {
         self.find_pte(vpn).map(|pte| *pte)
     }
+
+
     /// get the physical address from the virtual address
     pub fn translate_va(&self, va: VirtAddr) -> Option<PhysAddr> {
         self.find_pte(va.clone().floor()).map(|pte| {
@@ -159,6 +161,17 @@ impl PageTable {
         8usize << 60 | self.root_ppn.0
     }
 }
+
+    ///
+    pub fn translate_timeval(token: usize,_ts:*mut TimeVal)->&'static mut TimeVal{
+        let pagetable=PageTable::from_token(token);
+        let time_add=VirtAddr(_ts as usize);
+        let time_vpn=time_add.floor();
+        let time_ppn=pagetable.translate(time_vpn).unwrap().ppn();
+        time_ppn.get_offset_mut_time(time_add.page_offset())
+    
+    }
+
 
 /// Translate&Copy a ptr[u8] array with LENGTH len to a mutable u8 Vec through page table
 pub fn translated_byte_buffer(token: usize, ptr: *const u8, len: usize) -> Vec<&'static mut [u8]> {

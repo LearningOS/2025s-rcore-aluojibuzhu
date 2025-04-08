@@ -2,6 +2,7 @@
 use super::PageTableEntry;
 use crate::config::{PAGE_SIZE, PAGE_SIZE_BITS};
 use core::fmt::{self, Debug, Formatter};
+use crate::syscall::TimeVal;
 /// physical address
 const PA_WIDTH_SV39: usize = 56;
 const VA_WIDTH_SV39: usize = 39;
@@ -191,6 +192,13 @@ impl PhysPageNum {
         let pa: PhysAddr = (*self).into();
         pa.get_mut()
     }
+    ///
+    pub fn get_offset_mut_time(&self,offset:usize) -> &'static mut TimeVal {
+        let pa: PhysAddr = (*self).into();
+        let comp_address=pa.0|offset;//页地址偏移地址合并
+        //println!("the physaddr is{}",comp_address);
+        PhysAddr::from(comp_address).get_mut()
+    }
 }
 
 /// iterator for phy/virt page number
@@ -217,13 +225,16 @@ impl<T> SimpleRange<T>
 where
     T: StepByOne + Copy + PartialEq + PartialOrd + Debug,
 {
+    ///
     pub fn new(start: T, end: T) -> Self {
         assert!(start <= end, "start {:?} > end {:?}!", start, end);
         Self { l: start, r: end }
     }
+    ///
     pub fn get_start(&self) -> T {
         self.l
     }
+    ///
     pub fn get_end(&self) -> T {
         self.r
     }
