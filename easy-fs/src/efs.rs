@@ -6,6 +6,8 @@ use crate::BLOCK_SZ;
 use alloc::sync::Arc;
 use spin::Mutex;
 ///An easy file system on block
+/// 
+
 pub struct EasyFileSystem {
     ///Real device
     pub block_device: Arc<dyn BlockDevice>,
