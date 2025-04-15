@@ -53,7 +53,7 @@ mod fs;
 mod process;
 
 use fs::*;
-use process::*;
+pub use process::*;
 
 use crate::fs::Stat;
 

@@ -11,7 +11,8 @@ use alloc::vec::Vec;
 use core::arch::asm;
 use lazy_static::*;
 use riscv::register::satp;
-
+///
+pub const BIGSTRIDE: u32 =(u32::MAX-1)/2;
 extern "C" {
     fn stext();
     fn etext();
@@ -35,6 +36,26 @@ lazy_static! {
 pub fn kernel_token() -> usize {
     KERNEL_SPACE.exclusive_access().token()
 }
+///
+pub struct Priority{
+    ///
+    pub priority:u8,
+    ///
+    pub pass:u32,
+    ///
+    pub stride:u32,
+}
+impl Priority {
+    ///设置优先级
+    pub fn tcb_set_priority(& mut self,_pori:isize){
+        self.pass=BIGSTRIDE/(_pori as u32);
+        self.priority=_pori as u8;
+    }
+    ///叠加步长
+    pub fn tcb_pass_strde(&mut self){
+        self.stride+=self.pass;
+    }
+}
 
 /// address space
 pub struct MemorySet {
@@ -43,6 +64,11 @@ pub struct MemorySet {
 }
 
 impl MemorySet {
+     ///释放页表映射
+     pub fn page_table_umap(& mut self,vpn:VirtPageNum){
+       
+        self.page_table.unmap(vpn);
+    }
     /// Create a new empty `MemorySet`.
     pub fn new_bare() -> Self {
         Self {

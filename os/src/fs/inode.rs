@@ -13,7 +13,6 @@ use alloc::vec::Vec;
 use bitflags::*;
 use easy_fs::{EasyFileSystem, Inode};
 use lazy_static::*;
-
 /// inode in memory
 /// A wrapper around a filesystem inode
 /// to implement File trait atop
@@ -29,6 +28,8 @@ pub struct OSInodeInner {
 }
 
 impl OSInode {
+    ///
+    
     /// create a new inode in memory
     pub fn new(readable: bool, writable: bool, inode: Arc<Inode>) -> Self {
         Self {
@@ -56,6 +57,7 @@ impl OSInode {
 }
 
 lazy_static! {
+    ///
     pub static ref ROOT_INODE: Arc<Inode> = {
         let efs = EasyFileSystem::open(BLOCK_DEVICE.clone());
         Arc::new(EasyFileSystem::root_inode(&efs))
@@ -104,6 +106,7 @@ impl OpenFlags {
 /// Open a file
 pub fn open_file(name: &str, flags: OpenFlags) -> Option<Arc<OSInode>> {
     let (readable, writable) = flags.read_write();
+
     if flags.contains(OpenFlags::CREATE) {
         if let Some(inode) = ROOT_INODE.find(name) {
             // clear size
@@ -113,7 +116,7 @@ pub fn open_file(name: &str, flags: OpenFlags) -> Option<Arc<OSInode>> {
             // create file
             ROOT_INODE
                 .create(name)
-                .map(|inode| Arc::new(OSInode::new(readable, writable, inode)))
+                .map(|inode| {println!("the new inode is {}",inode.inode_id());Arc::new(OSInode::new(readable, writable, inode))})
         }
     } else {
         ROOT_INODE.find(name).map(|inode| {
@@ -155,5 +158,13 @@ impl File for OSInode {
             total_write_size += write_size;
         }
         total_write_size
+    }
+    ///
+    fn inode(&self)->usize{
+        self.inner.exclusive_access().inode.inode_id()
+    }
+    ///
+    fn nlink(&self)->usize{
+        self.inner.exclusive_access().inode.nlink_id()
     }
 }

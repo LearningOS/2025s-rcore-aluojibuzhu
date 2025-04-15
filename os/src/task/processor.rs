@@ -11,7 +11,7 @@ use crate::sync::UPSafeCell;
 use crate::trap::TrapContext;
 use alloc::sync::Arc;
 use lazy_static::*;
-
+use crate::mm::{VirtPageNum,PageTableEntry,VirtAddr,MapPermission,SimpleRange};
 /// Processor management structure
 pub struct Processor {
     ///The task currently executing on the current processor
@@ -44,9 +44,87 @@ impl Processor {
     pub fn current(&self) -> Option<Arc<TaskControlBlock>> {
         self.current.as_ref().map(Arc::clone)
     }
+
+    ///检查页帧是否已分配
+    pub fn curret_fram_is_empty(&self,vpn:VirtPageNum)->Option<PageTableEntry>{
+        let inner=self.current.as_ref().clone();
+        match inner {
+            Some(inner_process)=>{
+                let pte =inner_process.inner_exclusive_access().memory_set.translate(vpn);
+                return pte;
+            }
+            None=>{
+                return None;
+            }
+        }
+    }
+
+    ///创造新map区域
+    pub fn creat_new_map_area(& self,start_va: VirtAddr, end_va: VirtAddr, perm: MapPermission){
+        let inner=self.current.as_ref().clone();
+        match inner{
+            Some(inner_process)=>{
+                inner_process.inner_exclusive_access().memory_set.insert_framed_area(start_va, end_va, perm);
+            },
+            None=>{
+                panic!("this is no task running can mmap");
+            }
+        }
+    }
+
+    ///解引用
+    pub fn umap_memoryset(&self,start:VirtAddr,end:VirtAddr )->i32{
+        let start_vpn=start.floor();
+        let end_vpn=end.ceil();
+        let inner=self.current.as_ref().clone();
+        match inner {
+            Some(inner_process)=>{
+                for vpn in SimpleRange::new(start_vpn, end_vpn){
+                    //println!("umap start_vpn is {:?}",vpn);
+                    if let Some(pte)=inner_process.inner_exclusive_access().memory_set.translate(vpn){
+                        //println!("pte is  {:?} start_vpn is {:?}",pte,start_vpn);
+                        if !pte.is_valid(){
+                            return -1;
+                        }
+                        
+                    }else {
+                       return -1;
+                    }
+                    inner_process.inner_exclusive_access().memory_set.page_table_umap(vpn);
+                    if let Some(pte)=inner_process.inner_exclusive_access().memory_set.translate(vpn){
+                        if pte.is_valid(){
+                        //println!("umap is err {:?} start_vpn is {:?}",pte,start_vpn);
+                        }
+                    }
+                }
+            }
+            None=>{
+                return 0;
+            }
+        }
+        
+        0
+    }
+
+    ///
+    pub fn set_priority(&self ,_pori:isize) ->isize{
+        let inner=self.current.as_ref().clone();
+        match inner {
+            Some(inner_process)=>{
+                inner_process.inner_exclusive_access().schedule_priority.tcb_set_priority(_pori);
+               // println!("ok {}",inner_process.inner_exclusive_access().schedule_priority.priority);
+                return 0;
+            }
+            None=>{
+                return -1;
+            }
+        }
+
+    }
 }
 
 lazy_static! {
+    ///
     pub static ref PROCESSOR: UPSafeCell<Processor> = unsafe { UPSafeCell::new(Processor::new()) };
 }
 
