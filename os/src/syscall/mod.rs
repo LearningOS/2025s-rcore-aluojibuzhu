@@ -32,6 +32,7 @@ pub const SYSCALL_SLEEP: usize = 101;
 pub const SYSCALL_YIELD: usize = 124;
 /// kill syscall
 pub const SYSCALL_KILL: usize = 129;
+
 /*
 /// sigaction syscall
 pub const SYSCALL_SIGACTION: usize = 134;
@@ -103,12 +104,11 @@ mod fs;
 mod process;
 mod sync;
 mod thread;
-
+pub use process::TimeVal;
 use fs::*;
 use process::*;
-use sync::*;
+pub use sync::*;
 use thread::*;
-
 use crate::fs::Stat;
 
 /// handle syscall exception with `syscall_id` and other arguments

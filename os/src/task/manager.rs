@@ -5,8 +5,10 @@
 
 use super::{ProcessControlBlock, TaskControlBlock, TaskStatus};
 use crate::sync::UPSafeCell;
+use crate::task::current_process;
 use alloc::collections::{BTreeMap, VecDeque};
 use alloc::sync::Arc;
+use alloc::vec::Vec;
 use lazy_static::*;
 ///A array of `TaskControlBlock` that is thread-safe
 pub struct TaskManager {
@@ -18,6 +20,17 @@ pub struct TaskManager {
 
 /// A simple FIFO scheduler.
 impl TaskManager {
+///
+    pub fn ready_list(&self)->Vec<usize>{
+        let mut list=Vec::new();
+        let pcb =current_process().pid.0;
+        for tcb in &self.ready_queue{
+            if tcb.process.upgrade().unwrap().getpid()==pcb{
+                list.push(tcb.inner_exclusive_access().res.as_ref().unwrap().tid);
+            }
+        }
+        list.clone()
+    }
     ///Creat an empty TaskManager
     pub fn new() -> Self {
         Self {

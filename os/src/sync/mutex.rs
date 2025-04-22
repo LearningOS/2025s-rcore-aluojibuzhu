@@ -4,14 +4,17 @@ use super::UPSafeCell;
 use crate::task::TaskControlBlock;
 use crate::task::{block_current_and_run_next, suspend_current_and_run_next};
 use crate::task::{current_task, wakeup_task};
+use alloc::vec::Vec;
 use alloc::{collections::VecDeque, sync::Arc};
 
 /// Mutex trait
-pub trait Mutex: Sync + Send {
+pub trait Mutex: Sync + Send{
     /// Lock the mutex
     fn lock(&self);
     /// Unlock the mutex
     fn unlock(&self);
+    ///
+    fn queue_list(&self)->Vec<usize>;
 }
 
 /// Spinlock Mutex struct
@@ -29,6 +32,10 @@ impl MutexSpin {
 }
 
 impl Mutex for MutexSpin {
+
+    fn queue_list(&self)->Vec<usize> {
+        Vec::new()
+    }
     /// Lock the spinlock mutex
     fn lock(&self) {
         trace!("kernel: MutexSpin::lock");
@@ -77,7 +84,20 @@ impl MutexBlocking {
     }
 }
 
+
 impl Mutex for MutexBlocking {
+
+    fn queue_list(&self)->Vec<usize>{
+        let mutex_inner = self.inner.exclusive_access();
+        let mut list =Vec::new();
+        for tcb in &mutex_inner.wait_queue{
+            let inner=tcb.inner_exclusive_access();
+            list.push(inner.res.as_ref().unwrap().tid);
+        }
+        drop(mutex_inner);
+        list.clone()
+        }
+
     /// lock the blocking mutex
     fn lock(&self) {
         trace!("kernel: MutexBlocking::lock");

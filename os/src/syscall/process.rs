@@ -7,11 +7,15 @@ use crate::{
     },
 };
 use alloc::{string::String, sync::Arc, vec::Vec};
-
+use crate::mm::translate_timeval;
+use crate::timer::get_time_us;
 #[repr(C)]
 #[derive(Debug)]
+///
 pub struct TimeVal {
+    ///
     pub sec: usize,
+    ///
     pub usec: usize,
 }
 
@@ -156,7 +160,12 @@ pub fn sys_get_time(_ts: *mut TimeVal, _tz: usize) -> isize {
         "kernel:pid[{}] sys_get_time NOT IMPLEMENTED",
         current_task().unwrap().process.upgrade().unwrap().getpid()
     );
-    -1
+    let time_weget=translate_timeval(current_user_token(),_ts);
+    *time_weget=TimeVal{
+        sec:get_time_us()/1000000,
+        usec:get_time_us()%1000000,
+    };
+    0
 }
 
 /// mmap syscall

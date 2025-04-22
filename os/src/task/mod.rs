@@ -18,7 +18,7 @@ mod signal;
 mod switch;
 #[allow(clippy::module_inception)]
 mod task;
-
+pub use manager::TASK_MANAGER;
 use self::id::TaskUserRes;
 use crate::fs::{open_file, OpenFlags};
 use crate::task::manager::add_stopping_task;

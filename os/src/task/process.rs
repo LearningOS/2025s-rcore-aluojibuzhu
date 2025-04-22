@@ -14,7 +14,6 @@ use alloc::sync::{Arc, Weak};
 use alloc::vec;
 use alloc::vec::Vec;
 use core::cell::RefMut;
-
 /// Process Control Block
 pub struct ProcessControlBlock {
     /// immutable
@@ -24,6 +23,7 @@ pub struct ProcessControlBlock {
 }
 
 /// Inner of Process Control Block
+
 pub struct ProcessControlBlockInner {
     /// is zombie?
     pub is_zombie: bool,
@@ -49,6 +49,14 @@ pub struct ProcessControlBlockInner {
     pub semaphore_list: Vec<Option<Arc<Semaphore>>>,
     /// condvar list
     pub condvar_list: Vec<Option<Arc<Condvar>>>,
+
+    pub allocation:[[isize;10];20],
+
+    pub need:[[isize;10];20],
+
+    pub available:[isize;20],
+    
+    pub dead_lock_check:bool,
 }
 
 impl ProcessControlBlockInner {
@@ -119,6 +127,10 @@ impl ProcessControlBlock {
                     mutex_list: Vec::new(),
                     semaphore_list: Vec::new(),
                     condvar_list: Vec::new(),
+                    allocation:[[0;10];20],
+                    need:[[0;10];20],
+                    available:[0;20],
+                    dead_lock_check:false,
                 })
             },
         });
@@ -245,6 +257,10 @@ impl ProcessControlBlock {
                     mutex_list: Vec::new(),
                     semaphore_list: Vec::new(),
                     condvar_list: Vec::new(),
+                    allocation:[[0;10];20],
+                    need:[[0;10];20],
+                    available:[0;20],
+                    dead_lock_check:false,
                 })
             },
         });

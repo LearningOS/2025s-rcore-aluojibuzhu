@@ -132,7 +132,11 @@ pub struct TaskUserRes {
     pub tid: usize,
     /// user stack base
     pub ustack_base: usize,
-    /// process belongs to
+
+    pub matrix_count: [usize;3],
+
+    pub matrix_need: [usize;3],
+
     pub process: Weak<ProcessControlBlock>,
 }
 /// Return the bottom addr (low addr) of the trap context for a task
@@ -145,6 +149,23 @@ fn ustack_bottom_from_tid(ustack_base: usize, tid: usize) -> usize {
 }
 
 impl TaskUserRes {
+
+    ///互斥锁累加
+    pub fn mutex_count(& mut self){
+        self.matrix_count[0]+=1;
+    }
+    ///信号量累加
+    pub fn semmaphero_count(& mut self){
+        self.matrix_count[1]+=1;
+    }
+    pub fn mutex_need(& mut self){
+        self.matrix_need[0]+=1;
+    }
+    ///信号量需求
+    pub fn semmaphero_need(& mut self){
+        self.matrix_need[1]+=1;
+    }
+
     /// Create a new TaskUserRes (Task User Resource)
     pub fn new(
         process: Arc<ProcessControlBlock>,
@@ -156,6 +177,8 @@ impl TaskUserRes {
             tid,
             ustack_base,
             process: Arc::downgrade(&process),
+            matrix_count: [0; 3],
+            matrix_need: [0; 3],
         };
         if alloc_user_res {
             task_user_res.alloc_user_res();

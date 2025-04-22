@@ -3,7 +3,7 @@
 use super::PageTableEntry;
 use crate::config::{PAGE_SIZE, PAGE_SIZE_BITS};
 use core::fmt::{self, Debug, Formatter};
-
+use crate::syscall::TimeVal;
 const PA_WIDTH_SV39: usize = 56;
 const VA_WIDTH_SV39: usize = 39;
 const PPN_WIDTH_SV39: usize = PA_WIDTH_SV39 - PAGE_SIZE_BITS;
@@ -196,6 +196,13 @@ impl PhysPageNum {
     pub fn get_bytes_array(&self) -> &'static mut [u8] {
         let pa: PhysAddr = (*self).into();
         unsafe { core::slice::from_raw_parts_mut(pa.0 as *mut u8, 4096) }
+    }
+    ///
+    pub fn get_offset_mut_time(&self,offset:usize) -> &'static mut TimeVal {
+        let pa: PhysAddr = (*self).into();
+        let comp_address=pa.0|offset;//页地址偏移地址合并
+        //println!("the physaddr is{}",comp_address);
+        PhysAddr::from(comp_address).get_mut()
     }
     /// Get the mutable reference of physical address
     pub fn get_mut<T>(&self) -> &'static mut T {

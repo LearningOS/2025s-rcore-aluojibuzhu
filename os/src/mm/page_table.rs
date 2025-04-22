@@ -4,7 +4,7 @@ use alloc::string::String;
 use alloc::vec;
 use alloc::vec::Vec;
 use bitflags::*;
-
+use crate::syscall::TimeVal;
 bitflags! {
     /// page table entry flags
     pub struct PTEFlags: u8 {
@@ -216,7 +216,14 @@ pub fn translated_refmut<T>(token: usize, ptr: *mut T) -> &'static mut T {
         .unwrap()
         .get_mut()
 }
-
+///
+pub fn translate_timeval(token: usize,_ts:*mut TimeVal)->&'static mut TimeVal{
+    let pagetable=PageTable::from_token(token);
+    let time_add=VirtAddr(_ts as usize);
+    let time_vpn=time_add.floor();
+    let time_ppn=pagetable.translate(time_vpn).unwrap().ppn();
+    time_ppn.get_offset_mut_time(time_add.page_offset())
+}
 /// An abstraction over a buffer passed from user space to kernel space
 pub struct UserBuffer {
     /// A list of buffers
